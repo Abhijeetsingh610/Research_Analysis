@@ -134,7 +134,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
         rects: [],
         pageNumber: s.location.page,
       },
-      content: { text: s.text },
+  content: { text: s.chunk || s.text },
       comment: { text: s.explanation, emoji: "" },
     }) : null).filter(Boolean) as IHighlight[]),
     ...((analysis?.gaps || []).map((g, i) => isValidHighlightLocation(g.location) ? ({
@@ -152,7 +152,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
         rects: [],
         pageNumber: g.location.page,
       },
-      content: { text: g.text },
+  content: { text: g.chunk || g.text },
       comment: { text: g.explanation, emoji: "" },
     }) : null).filter(Boolean) as IHighlight[]),
     ...((analysis?.suggestions || []).map((s, i) => s.location && isValidHighlightLocation(s.location) ? ({
@@ -170,7 +170,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
         rects: [],
         pageNumber: s.location.page,
       },
-      content: { text: s.text },
+  content: { text: s.chunk || s.text },
       comment: { text: s.category + ' (' + s.priority + ')', emoji: "" },
     }) : null).filter(Boolean) as IHighlight[])
   ];
@@ -348,7 +348,31 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                               >
                                 <div className="text-sm font-medium text-yellow-700 break-words">"{gap.text}"</div>
                                 <div className="text-xs text-muted-foreground mt-1 break-words">{gap.explanation}</div>
-                                {/* highlight location info removed */}
+                                {gap.exaContext && gap.exaContext.length > 0 && (
+                                  <div className="mt-2 pl-2 border-l-2 border-gray-200">
+                                    <div className="text-xs font-semibold text-gray-500 mb-1">Reference Context:</div>
+                                    <ul className="space-y-1">
+                                      {gap.exaContext.map((ref, refIdx) => (
+                                        <li key={refIdx} className="text-xs">
+                                          <a
+                                            href={ref.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:underline"
+                                          >
+                                            {ref.title || ref.url}
+                                          </a>
+                                          {ref.snippet && (
+                                            <div className="text-gray-600 mt-0.5">{ref.snippet}</div>
+                                          )}
+                                          {ref.publishedAt && (
+                                            <div className="text-gray-400">{new Date(ref.publishedAt).toLocaleDateString()}</div>
+                                          )}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
                               </li>
                             ))}
                           </ul>

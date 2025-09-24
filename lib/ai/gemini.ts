@@ -1,3 +1,28 @@
+// Extract search queries from a paper using Gemini
+export async function extractSearchQueriesWithGemini(text: string, title: string): Promise<string[]> {
+  if (!text || text.trim().length < 100) {
+    // Fallback: use title words as queries
+    return title.split(" ").filter(w => w.length > 3).slice(0, 5)
+  }
+  const genAI = new GoogleGenerativeAI(apiKey!)
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" })
+  const prompt = `You are an expert research assistant. Given the following research paper, extract 3-5 concise search queries or research questions that would help find the most relevant and recent related work for gap analysis. Return only a JSON array of strings.\n\nPaper Title: ${title}\n\nPaper Content:\n${text}`
+  try {
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    const out = response.text()
+    // Try to extract a JSON array from the output
+  const match = out.match(/\[[\s\S]*?\]/)
+    if (!match) throw new Error("No JSON array found in Gemini response")
+    const queries = JSON.parse(match[0])
+    if (!Array.isArray(queries)) throw new Error("Extracted value is not an array")
+    return queries.map((q: any) => String(q)).filter(Boolean)
+  } catch (e) {
+    console.error("extractSearchQueriesWithGemini error:", e)
+    // Fallback: use title words
+    return title.split(" ").filter(w => w.length > 3).slice(0, 5)
+  }
+}
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { type ParsedPDFResult } from "./pdf-parser"
 
