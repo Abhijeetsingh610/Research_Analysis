@@ -17,6 +17,14 @@ const HighlightLocationSchema = z.object({
       height: z.number(),
     })
     .optional(),
+  rects: z.array(z.object({
+    x1: z.number(),
+    y1: z.number(),
+    x2: z.number(),
+    y2: z.number(),
+    width: z.number(),
+    height: z.number(),
+  })).optional(),
 })
 
 export const notesRouter = createTRPCRouter({
@@ -35,22 +43,25 @@ export const notesRouter = createTRPCRouter({
     return notes
   }),
 
-  add: protectedProcedure
+  // For compatibility with frontend expecting notes.create
+  create: protectedProcedure
     .input(
       z.object({
-        paperId: z.string(),
-        highlightLocation: HighlightLocationSchema,
-        noteText: z.string(),
-      }),
+        paper_id: z.string(),
+        note_text: z.string(),
+        selected_text: z.string().optional(),
+        highlight_location: HighlightLocationSchema,
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const { data: note, error } = await ctx.supabase
         .from("notes")
         .insert({
-          paper_id: input.paperId,
+          paper_id: input.paper_id,
           user_id: ctx.user.id,
-          highlight_location: input.highlightLocation,
-          note_text: input.noteText,
+          highlight_location: input.highlight_location,
+          note_text: input.note_text,
+          selected_text: input.selected_text,
         })
         .select()
         .single()

@@ -85,22 +85,12 @@ export default function PaperPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!analysis && (
-              <Button size="sm" asChild>
-                <Link href={`/papers/${paper.id}/analyze`}>
-                  <Play className="h-4 w-4 mr-2" />
-                  Run Analysis
-                </Link>
-              </Button>
-            )}
-            {analysis && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/papers/${paper.id}/analyze`}>
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  View Analysis
-                </Link>
-              </Button>
-            )}
+            <Button size="sm" asChild>
+              <Link href={`/papers/${paper.id}/analyze`}>
+                <Play className="h-4 w-4 mr-2" />
+                Re-analyze
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

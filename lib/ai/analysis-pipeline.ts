@@ -16,12 +16,11 @@ export async function runAnalysisPipeline(text: string, title: string): Promise<
     console.log("Extracting keywords...")
     const keywords = extractKeywords(text, title)
 
-    // Step 2: Run Gemini analysis and Exa search in parallel
-      console.log("Running AI analysis and related paper search...")
-      const [analysis, relatedPapers] = await Promise.all([
-        analyzePaperWithGemini(text, title),
-        searchRelatedPapers(title, keywords, 8),
-      ])
+    // Step 2: Run Exa search first, then pass results to Gemini analysis
+    console.log("Running related paper search (Exa)...")
+    const relatedPapers = await searchRelatedPapers(title, keywords, 8)
+    console.log("Running AI analysis with Exa context...")
+    const analysis = await analyzePaperWithGemini(text, title, relatedPapers)
 
     console.log("Analysis pipeline completed successfully")
 

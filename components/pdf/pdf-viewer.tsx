@@ -1,7 +1,11 @@
 ﻿"use client";
 
-import { useState, useCallback } from "react";
-import PDFJSViewer from "@/components/pdf/pdfjs-viewer";
+import React, { useState, useRef, useCallback } from "react";
+import { PdfHighlighter, Tip, Highlight, Popup, PdfLoader } from "react-pdf-highlighter";
+import type { IHighlight, ScaledPosition } from "react-pdf-highlighter";
+import "react-pdf-highlighter/dist/style.css";
+import "./pdf-highlighter-colors.css";
+import type { HighlightLocation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { MessageSquare, Lightbulb, AlertTriangle, CheckCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import type { Analysis, Note } from "@/lib/types";
+import { PDFViewerLoading } from "./pdf-viewer-loading";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 interface PDFViewerProps {
@@ -19,6 +24,9 @@ interface PDFViewerProps {
 }
 
 export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewerProps) {
+  const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
+  const pdfHighlighterRef = useRef<any>(null);
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
   console.log("PDFViewer received analysis:", analysis)
   console.log("Analysis strengths:", analysis?.strengths)
   console.log("Analysis gaps:", analysis?.gaps)
@@ -29,6 +37,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     gaps: true,
     suggestions: true
   });
+  const scrollToFnRef = useRef<any>(null);
 
   const utils = trpc.useUtils();
 
@@ -43,12 +52,162 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     },
   });
 
+  const addNoteMutation = trpc.notes.create.useMutation({
+    onSuccess: () => {
+      utils.notes.list.invalidate({ paperId });
+      utils.papers.getById.invalidate({ id: paperId });
+    },
+    onError: (error) => {
+      alert("Failed to add note: " + error.message);
+    },
+  });
+
+  const createNote = useCallback(async (position: ScaledPosition, content: { text?: string }, comment: { text: string; emoji: string }) => {
+    try {
+      await addNoteMutation.mutateAsync({
+        paper_id: paperId,
+        note_text: comment.text,
+        selected_text: content.text,
+        highlight_location: {
+          page: position.pageNumber,
+          textSpan: {
+            start: 0,
+            end: content.text?.length ?? 0,
+          },
+          boundingRect: {
+            x1: position.boundingRect.x1,
+            y1: position.boundingRect.y1,
+            x2: position.boundingRect.x2,
+            y2: position.boundingRect.y2,
+            width: position.boundingRect.x2 - position.boundingRect.x1,
+            height: position.boundingRect.y2 - position.boundingRect.y1,
+          },
+          rects: position.rects,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to create note:", error);
+    }
+  }, [paperId, addNoteMutation]);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
   };
+
+  // Map AI and user highlights to IHighlight[]
+  function getHighlightType(id: string | undefined) {
+    if (!id) return "other";
+    if (id.startsWith("note-")) return "note";
+    if (id.startsWith("strength-")) return "strength";
+    if (id.startsWith("gap-")) return "gap";
+    if (id.startsWith("suggestion-")) return "suggestion";
+    return "other";
+  }
+
+  // Helper to check if a highlight location is valid
+  function isValidHighlightLocation(loc: any) {
+    return (
+      loc &&
+      typeof loc.page === "number" &&
+      loc.page > 0 &&
+      loc.boundingRect &&
+      Object.values(loc.boundingRect).every(v => typeof v === "number" && !isNaN(v))
+    );
+  }
+
+  const aiHighlights: IHighlight[] = [
+    ...((analysis?.strengths || []).map((s, i) => isValidHighlightLocation(s.location) ? ({
+      id: `strength-${i}`,
+      position: {
+        boundingRect: {
+          x1: s.location.boundingRect?.x1 ?? 0,
+          y1: s.location.boundingRect?.y1 ?? 0,
+          x2: s.location.boundingRect?.x2 ?? 0,
+          y2: s.location.boundingRect?.y2 ?? 0,
+          width: s.location.boundingRect?.width ?? 0,
+          height: s.location.boundingRect?.height ?? 0,
+          pageNumber: s.location.page,
+        },
+        rects: [],
+        pageNumber: s.location.page,
+      },
+      content: { text: s.text },
+      comment: { text: s.explanation, emoji: "" },
+    }) : null).filter(Boolean) as IHighlight[]),
+    ...((analysis?.gaps || []).map((g, i) => isValidHighlightLocation(g.location) ? ({
+      id: `gap-${i}`,
+      position: {
+        boundingRect: {
+          x1: g.location.boundingRect?.x1 ?? 0,
+          y1: g.location.boundingRect?.y1 ?? 0,
+          x2: g.location.boundingRect?.x2 ?? 0,
+          y2: g.location.boundingRect?.y2 ?? 0,
+          width: g.location.boundingRect?.width ?? 0,
+          height: g.location.boundingRect?.height ?? 0,
+          pageNumber: g.location.page,
+        },
+        rects: [],
+        pageNumber: g.location.page,
+      },
+      content: { text: g.text },
+      comment: { text: g.explanation, emoji: "" },
+    }) : null).filter(Boolean) as IHighlight[]),
+    ...((analysis?.suggestions || []).map((s, i) => s.location && isValidHighlightLocation(s.location) ? ({
+      id: `suggestion-${i}`,
+      position: {
+        boundingRect: {
+          x1: s.location.boundingRect?.x1 ?? 0,
+          y1: s.location.boundingRect?.y1 ?? 0,
+          x2: s.location.boundingRect?.x2 ?? 0,
+          y2: s.location.boundingRect?.y2 ?? 0,
+          width: s.location.boundingRect?.width ?? 0,
+          height: s.location.boundingRect?.height ?? 0,
+          pageNumber: s.location.page,
+        },
+        rects: [],
+        pageNumber: s.location.page,
+      },
+      content: { text: s.text },
+      comment: { text: s.category + ' (' + s.priority + ')', emoji: "" },
+    }) : null).filter(Boolean) as IHighlight[])
+  ];
+  const userHighlights: IHighlight[] = notes
+    .filter(note => isValidHighlightLocation(note.highlight_location))
+    .map((note) => ({
+      id: `note-${note.id}`,
+      position: {
+        boundingRect: {
+          x1: note.highlight_location.boundingRect?.x1 ?? 0,
+          y1: note.highlight_location.boundingRect?.y1 ?? 0,
+          x2: note.highlight_location.boundingRect?.x2 ?? 0,
+          y2: note.highlight_location.boundingRect?.y2 ?? 0,
+          width: note.highlight_location.boundingRect?.width ?? 0,
+          height: note.highlight_location.boundingRect?.height ?? 0,
+          pageNumber: note.highlight_location.page,
+        },
+        rects: note.highlight_location.rects || [],
+        pageNumber: note.highlight_location.page,
+      },
+      content: { text: note.note_text },
+      comment: { text: note.note_text, emoji: "" },
+    }));
+  const allHighlights = [...aiHighlights, ...userHighlights];
+
+  const handleSelectionFinished = (position: ScaledPosition, content: { text?: string }, hideTip: () => void, transformSelection: () => void) => {
+    return (
+      <Tip
+        onOpen={transformSelection}
+        onConfirm={(comment: { text: string; emoji: string }) => {
+          createNote(position, content, comment);
+        }}
+      />
+    );
+  };
+
+
 
   return (
     <PanelGroup direction="horizontal" className="w-full max-w-full min-h-[300px]">
@@ -57,7 +216,44 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
         <div className="bg-white rounded-lg shadow-lg flex flex-col h-full">
           <ScrollArea className="flex-1">
             <div className="flex justify-center p-4">
-              <PDFJSViewer url={pdfUrl} />
+              <div style={{ width: "100%", height: 600, position: "absolute" }}>
+                <PdfLoader url={pdfUrl} beforeLoad={<PDFViewerLoading />}>
+                  {(pdfDocument) => (
+                    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+                      <div style={{ position: "absolute", width: "100%", height: "100%" }}>
+                        <PdfHighlighter
+                          ref={pdfHighlighterRef}
+                          pdfDocument={pdfDocument}
+                          highlights={allHighlights}
+                          onSelectionFinished={handleSelectionFinished}
+                          highlightTransform={(highlight, index, setTip, hideTip, _, __, isScrolledTo) => {
+                            const type = getHighlightType(highlight.id);
+                            let className = "";
+                            if (type === "note") className = "user-highlight";
+                            else if (type === "strength") className = "strength-highlight";
+                            else if (type === "gap") className = "gap-highlight";
+                            else if (type === "suggestion") className = "suggestion-highlight";
+                            return (
+                              <span key={highlight.id} className={className}>
+                                <Highlight
+                                  isScrolledTo={isScrolledTo}
+                                  position={highlight.position}
+                                  comment={highlight.comment}
+                                  onClick={() => setSelectedHighlightId(highlight.id)}
+                                />
+                              </span>
+                            );
+                          }}
+                          scrollRef={() => {}}
+                          onScrollChange={() => {}}
+                          pdfScaleValue="auto"
+                          enableAreaSelection={() => false}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </PdfLoader>
+              </div>
             </div>
           </ScrollArea>
         </div>
@@ -99,12 +295,20 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                         {expandedSections.strengths && (
                           <ul className="space-y-3">
                             {analysis.strengths.map((strength, index) => (
-                              <li key={index} className="border-l-2 border-green-500 pl-3 py-1">
+                              <li
+                                key={index}
+                                className={`border-l-2 border-green-500 pl-3 py-1 cursor-pointer hover:bg-green-50 ${selectedHighlightId === `strength-${index}` ? 'bg-green-100' : ''}`}
+                                onClick={() => {
+                                  setSelectedHighlightId(`strength-${index}`);
+                                  const highlight = allHighlights.find(h => h.id === `strength-${index}`);
+                                  if (highlight && scrollToFnRef.current) {
+                                    scrollToFnRef.current(highlight);
+                                  }
+                                }}
+                              >
                                 <div className="text-sm font-medium text-green-700 break-words">"{strength.text}"</div>
                                 <div className="text-xs text-muted-foreground mt-1 break-words">{strength.explanation}</div>
-                                <div className="text-xs text-green-600 mt-1">
-                                  Page {strength.location.page}, Position {strength.location.textSpan.start}-{strength.location.textSpan.end}
-                                </div>
+                                {/* highlight location info removed */}
                               </li>
                             ))}
                           </ul>
@@ -131,12 +335,20 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                         {expandedSections.gaps && (
                           <ul className="space-y-3">
                             {analysis.gaps.map((gap, index) => (
-                              <li key={index} className="border-l-2 border-yellow-500 pl-3 py-1">
+                              <li
+                                key={index}
+                                className={`border-l-2 border-yellow-500 pl-3 py-1 cursor-pointer hover:bg-yellow-50 ${selectedHighlightId === `gap-${index}` ? 'bg-yellow-100' : ''}`}
+                                onClick={() => {
+                                  setSelectedHighlightId(`gap-${index}`);
+                                  const highlight = allHighlights.find(h => h.id === `gap-${index}`);
+                                  if (highlight && scrollToFnRef.current) {
+                                    scrollToFnRef.current(highlight);
+                                  }
+                                }}
+                              >
                                 <div className="text-sm font-medium text-yellow-700 break-words">"{gap.text}"</div>
                                 <div className="text-xs text-muted-foreground mt-1 break-words">{gap.explanation}</div>
-                                <div className="text-xs text-yellow-600 mt-1">
-                                  Page {gap.location.page}, Position {gap.location.textSpan.start}-{gap.location.textSpan.end}
-                                </div>
+                                {/* highlight location info removed */}
                               </li>
                             ))}
                           </ul>
@@ -163,11 +375,21 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                         {expandedSections.suggestions && (
                           <ul className="space-y-3">
                             {analysis.suggestions.map((suggestion, index) => (
-                              <li key={index} className="border-l-2 border-blue-500 pl-3 py-1">
+                              <li
+                                key={index}
+                                className={`border-l-2 border-blue-500 pl-3 py-1 cursor-pointer hover:bg-blue-50 ${selectedHighlightId === `suggestion-${index}` ? 'bg-blue-100' : ''}`}
+                                onClick={() => {
+                                  setSelectedHighlightId(`suggestion-${index}`);
+                                  const highlight = allHighlights.find(h => h.id === `suggestion-${index}`);
+                                  if (highlight && scrollToFnRef.current) {
+                                    scrollToFnRef.current(highlight);
+                                  }
+                                }}
+                              >
                                 <div className="text-sm font-medium text-blue-700 break-words">"{suggestion.text}"</div>
                                 <div className="flex justify-between text-xs mt-1">
                                   <span className="text-blue-600">{suggestion.category}</span>
-                                  <span className={`${
+                                  <span className={`$${
                                     suggestion.priority === 'high' ? 'text-red-600' :
                                     suggestion.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
                                   }`}>
@@ -201,7 +423,14 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                         <div
                           key={note.id}
                           className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                          onClick={() => setSelectedNote(note)}
+                          onClick={() => {
+                            setSelectedNote(note);
+                            setSelectedHighlightId(`note-${note.id}`);
+                            const highlight = allHighlights.find(h => h.id === `note-${note.id}`);
+                            if (highlight && scrollToFnRef.current) {
+                              scrollToFnRef.current(highlight);
+                            }
+                          }}
                         >
                           <p className="text-sm break-words">{note.note_text}</p>
                           <p className="text-xs text-muted-foreground mt-1">
@@ -221,6 +450,13 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                     <CardTitle>Note Details</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    {selectedNote.selected_text && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Selected Text:</p>
+                        <p className="text-sm break-words bg-muted p-2 rounded">{selectedNote.selected_text}</p>
+                        <Separator className="my-2" />
+                      </div>
+                    )}
                     <p className="text-sm break-words">{selectedNote.note_text}</p>
                     <Separator />
                     <div className="flex justify-between items-center">
@@ -230,7 +466,10 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => deleteNoteMutation.mutate({ id: selectedNote.id })}
+                        onClick={() => {
+                          deleteNoteMutation.mutate({ id: selectedNote.id });
+                          setSelectedNote(null);
+                        }}
                         disabled={deleteNoteMutation.isPending}
                       >
                         Delete
