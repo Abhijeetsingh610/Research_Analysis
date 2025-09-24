@@ -32,11 +32,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
   console.log("Analysis gaps:", analysis?.gaps)
   console.log("Analysis suggestions:", analysis?.suggestions)
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [expandedSections, setExpandedSections] = useState({
-    strengths: true,
-    gaps: true,
-    suggestions: true
-  });
+  const [expandedSection, setExpandedSection] = useState<'strengths' | 'gaps' | 'suggestions'>('strengths');
   const scrollToFnRef = useRef<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -98,11 +94,8 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     }
   }, [paperId, addNoteMutation]);
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  const handleSectionToggle = (section: 'strengths' | 'gaps' | 'suggestions') => {
+    setExpandedSection(prev => (prev === section ? null : section));
   };
 
   // Map AI and user highlights to IHighlight[]
@@ -229,7 +222,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
         <div className="bg-white rounded-lg shadow-lg flex flex-col h-full">
           <ScrollArea className="flex-1">
             <div className="flex justify-center p-4">
-              <div style={{ width: "100%", height: 600, position: "absolute" }}>
+              <div style={{ width: "100%", height: 900, position: "absolute" }}>
                 <PdfLoader url={pdfUrl} beforeLoad={<PDFViewerLoading />}>
                   {(pdfDocument) => (
                     <div style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -295,18 +288,18 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                       <div>
                         <div
                           className="flex items-center justify-between cursor-pointer mb-2"
-                          onClick={() => toggleSection('strengths')}
+                          onClick={() => handleSectionToggle('strengths')}
                         >
                           <div className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-green-500" />
                             <span className="font-medium">Strengths ({analysis.strengths.length})</span>
                           </div>
-                          {expandedSections.strengths ?
+                          {expandedSection === 'strengths' ?
                             <ChevronUp className="h-4 w-4" /> :
                             <ChevronDown className="h-4 w-4" />
                           }
                         </div>
-                        {expandedSections.strengths && (
+                        {expandedSection === 'strengths' && (
                           <ul className="space-y-3">
                             {analysis.strengths.map((strength, index) => (
                               <li
@@ -335,18 +328,18 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                       <div>
                         <div
                           className="flex items-center justify-between cursor-pointer mb-2"
-                          onClick={() => toggleSection('gaps')}
+                          onClick={() => handleSectionToggle('gaps')}
                         >
                           <div className="flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4 text-yellow-500" />
                             <span className="font-medium">Gaps ({analysis.gaps.length})</span>
                           </div>
-                          {expandedSections.gaps ?
+                          {expandedSection === 'gaps' ?
                             <ChevronUp className="h-4 w-4" /> :
                             <ChevronDown className="h-4 w-4" />
                           }
                         </div>
-                        {expandedSections.gaps && (
+                        {expandedSection === 'gaps' && (
                           <ul className="space-y-3">
                             {analysis.gaps.map((gap, index) => (
                               <li
@@ -399,18 +392,18 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                       <div>
                         <div
                           className="flex items-center justify-between cursor-pointer mb-2"
-                          onClick={() => toggleSection('suggestions')}
+                          onClick={() => handleSectionToggle('suggestions')}
                         >
                           <div className="flex items-center gap-2">
                             <MessageSquare className="h-4 w-4 text-blue-500" />
                             <span className="font-medium">Suggestions ({analysis.suggestions.length})</span>
                           </div>
-                          {expandedSections.suggestions ?
+                          {expandedSection === 'suggestions' ?
                             <ChevronUp className="h-4 w-4" /> :
                             <ChevronDown className="h-4 w-4" />
                           }
                         </div>
-                        {expandedSections.suggestions && (
+                        {expandedSection === 'suggestions' && (
                           <ul className="space-y-3">
                             {analysis.suggestions.map((suggestion, index) => (
                               <li
