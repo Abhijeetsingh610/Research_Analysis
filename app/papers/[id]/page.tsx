@@ -88,7 +88,7 @@ export default function PaperPage() {
             <Button size="sm" asChild>
               <Link href={`/papers/${paper.id}/analyze`}>
                 <Play className="h-4 w-4 mr-2" />
-                Re-analyze
+                Start Analysis
               </Link>
             </Button>
           </div>
