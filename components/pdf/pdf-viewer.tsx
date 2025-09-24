@@ -38,6 +38,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     suggestions: true
   });
   const scrollToFnRef = useRef<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -62,7 +63,11 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     },
   });
 
-  const createNote = useCallback(async (position: ScaledPosition, content: { text?: string }, comment: { text: string; emoji: string }) => {
+  const notesQuery = trpc.notes.list.useQuery({ paperId });
+  const notesData = notesQuery.data || [];
+
+  const createNote = useCallback(async (position: ScaledPosition, content: { text?: string }, comment: { text: string; emoji: string }, hideTip?: () => void) => {
+    setIsSaving(true);
     try {
       await addNoteMutation.mutateAsync({
         paper_id: paperId,
@@ -85,8 +90,11 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
           rects: position.rects,
         },
       });
+      if (hideTip) hideTip();
     } catch (error) {
       console.error("Failed to create note:", error);
+    } finally {
+      setIsSaving(false);
     }
   }, [paperId, addNoteMutation]);
 
@@ -174,7 +182,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
       comment: { text: s.category + ' (' + s.priority + ')', emoji: "" },
     }) : null).filter(Boolean) as IHighlight[])
   ];
-  const userHighlights: IHighlight[] = notes
+  const userHighlights: IHighlight[] = notesData
     .filter(note => isValidHighlightLocation(note.highlight_location))
     .map((note) => ({
       id: `note-${note.id}`,
@@ -201,13 +209,18 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
       <Tip
         onOpen={transformSelection}
         onConfirm={(comment: { text: string; emoji: string }) => {
-          createNote(position, content, comment);
+          createNote(position, content, comment, hideTip);
         }}
+        isSaving={isSaving}
       />
     );
   };
 
-
+  // Delete note instantly from UI
+  const handleDeleteNote = async (id: string) => {
+    setSelectedNote(null);
+    deleteNoteMutation.mutate({ id });
+  };
 
   return (
     <PanelGroup direction="horizontal" className="w-full max-w-full min-h-[300px]">
@@ -233,8 +246,9 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                             else if (type === "strength") className = "strength-highlight";
                             else if (type === "gap") className = "gap-highlight";
                             else if (type === "suggestion") className = "suggestion-highlight";
+                            // Use both id and index for key to guarantee uniqueness
                             return (
-                              <span key={highlight.id} className={className}>
+                              <span key={`${highlight.id}-${index}`} className={className}>
                                 <Highlight
                                   isScrolledTo={isScrolledTo}
                                   position={highlight.position}
@@ -435,15 +449,15 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4" />
-                    Notes ({notes.length})
+                    Notes ({notesData.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {notes.length === 0 ? (
+                  {notesData.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No notes yet</p>
                   ) : (
                     <div className="space-y-2">
-                      {notes.map((note) => (
+                      {notesData.map((note) => (
                         <div
                           key={note.id}
                           className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
@@ -491,7 +505,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                         variant="destructive"
                         size="sm"
                         onClick={() => {
-                          deleteNoteMutation.mutate({ id: selectedNote.id });
+                          handleDeleteNote(selectedNote.id);
                           setSelectedNote(null);
                         }}
                         disabled={deleteNoteMutation.isPending}

@@ -27,7 +27,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { type ParsedPDFResult } from "./pdf-parser"
 
 const apiKey = process.env.GEMINI_API_KEY
-console.log("GEMINI_API_KEY loaded:", apiKey ? `Yes (${apiKey.substring(0, 10)}...)` : "No")
 
 export interface AnalysisResult {
   strengths: Array<{
