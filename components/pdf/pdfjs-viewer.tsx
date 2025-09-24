@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
+interface PDFJSViewerProps {
+  url: string;
+}
+
 declare global {
   interface Window {
     pdfjsLib: any;
   }
-}
-
-interface PDFJSViewerProps {
-  url: string;
 }
 
 export default function PDFJSViewer({ url }: PDFJSViewerProps) {
@@ -19,28 +19,33 @@ export default function PDFJSViewer({ url }: PDFJSViewerProps) {
   const [pdfLoaded, setPdfLoaded] = useState(false);
 
   useEffect(() => {
-    // Load PDF.js from CDN only once
-    if (!window.pdfjsLib && !pdfLoaded) {
+    // Load PDF.js from CDN if not already loaded
+    if (!window.pdfjsLib && !(window as any).pdfjsLib) {
       const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js";
-      script.async = true;
-
+      script.src = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
       script.onload = () => {
-        // Set worker source
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js";
-        setPdfLoaded(true);
+        // PDF.js attaches itself to window.pdfjsLib in newer versions
+        const pdfjs = (window as any).pdfjsLib || (window as any).pdfjs;
+        if (pdfjs) {
+          window.pdfjsLib = pdfjs;
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+          setPdfLoaded(true);
+        } else {
+          console.error("PDF.js loaded but pdfjsLib not found on window");
+          setError("PDF.js library loaded but not properly initialized");
+          setLoading(false);
+        }
       };
-
-      script.onerror = () => {
-        setError("Failed to load PDF.js library");
+      script.onerror = (e) => {
+        console.error("Failed to load PDF.js script:", e);
+        setError("Failed to load PDF.js library from CDN");
         setLoading(false);
       };
-
       document.head.appendChild(script);
-    } else if (window.pdfjsLib) {
+    } else {
       setPdfLoaded(true);
     }
-  }, [pdfLoaded]);
+  }, []);
 
   useEffect(() => {
     if (!pdfLoaded || !containerRef.current) return;
@@ -50,7 +55,7 @@ export default function PDFJSViewer({ url }: PDFJSViewerProps) {
         setLoading(true);
         setError(null);
 
-        if (!containerRef.current) return;
+        if (!containerRef.current || !window.pdfjsLib) return;
         containerRef.current.innerHTML = "";
 
         console.log("Loading PDF from:", url);
@@ -77,10 +82,11 @@ export default function PDFJSViewer({ url }: PDFJSViewerProps) {
             await page.render({
               canvasContext: context,
               viewport: viewport,
+              canvas: canvas,
             }).promise;
           }
 
-          containerRef.current.appendChild(canvas);
+          containerRef.current!.appendChild(canvas);
         }
 
         setLoading(false);

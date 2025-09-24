@@ -211,18 +211,12 @@ devDependencies:
   '@types/pdf-parse':
     specifier: ^1.1.5
     version: 1.1.5
-  '@types/pdfjs-dist':
-    specifier: ^2.10.377
-    version: 2.10.378
   '@types/react':
     specifier: ^19.1.13
     version: 19.1.13
   '@types/react-dom':
     specifier: ^19
     version: 19.1.9(@types/react@19.1.13)
-  pdfjs-dist:
-    specifier: ^5.4.149
-    version: 5.4.149
   postcss:
     specifier: ^8.5
     version: 8.5.6
@@ -530,6 +524,7 @@ packages:
     cpu: [arm64]
     os: [android]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-darwin-arm64@0.1.80:
@@ -538,6 +533,7 @@ packages:
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-darwin-x64@0.1.80:
@@ -546,6 +542,7 @@ packages:
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-linux-arm-gnueabihf@0.1.80:
@@ -554,6 +551,7 @@ packages:
     cpu: [arm]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-linux-arm64-gnu@0.1.80:
@@ -562,6 +560,7 @@ packages:
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-linux-arm64-musl@0.1.80:
@@ -570,6 +569,7 @@ packages:
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-linux-riscv64-gnu@0.1.80:
@@ -578,6 +578,7 @@ packages:
     cpu: [riscv64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-linux-x64-gnu@0.1.80:
@@ -586,6 +587,7 @@ packages:
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-linux-x64-musl@0.1.80:
@@ -594,6 +596,7 @@ packages:
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas-win32-x64-msvc@0.1.80:
@@ -602,6 +605,7 @@ packages:
     cpu: [x64]
     os: [win32]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@napi-rs/canvas@0.1.80:
@@ -619,6 +623,7 @@ packages:
       '@napi-rs/canvas-linux-x64-gnu': 0.1.80
       '@napi-rs/canvas-linux-x64-musl': 0.1.80
       '@napi-rs/canvas-win32-x64-msvc': 0.1.80
+    dev: false
     optional: true
 
   /@next/env@15.2.4:
@@ -2290,13 +2295,6 @@ packages:
       '@types/node': 22.18.6
     dev: true
 
-  /@types/pdfjs-dist@2.10.378:
-    resolution: {integrity: sha512-TRdIPqdsvKmPla44kVy4jv5Nt5vjMfVjbIEke1CRULIrwKNRC4lIiZvNYDJvbUMNCFPNIUcOKhXTyMJrX18IMA==}
-    deprecated: This is a stub types definition. pdfjs-dist provides its own type definitions, so you do not need this installed.
-    dependencies:
-      pdfjs-dist: 5.4.149
-    dev: true
-
   /@types/phoenix@1.6.6:
     resolution: {integrity: sha512-PIzZZlEppgrpoT2QgbnDU+MMzuR6BbCjllj0bM70lWoejMeNJAxCchxnv7J3XFkI8MpygtRpzXrIlmWUBclP5A==}
     dev: false
@@ -3237,13 +3235,6 @@ packages:
     optionalDependencies:
       '@napi-rs/canvas': 0.1.80
     dev: false
-
-  /pdfjs-dist@5.4.149:
-    resolution: {integrity: sha512-Xe8/1FMJEQPUVSti25AlDpwpUm2QAVmNOpFP0SIahaPIOKBKICaefbzogLdwey3XGGoaP4Lb9wqiw2e9Jqp0LA==}
-    engines: {node: '>=20.16.0 || >=22.3.0'}
-    optionalDependencies:
-      '@napi-rs/canvas': 0.1.80
-    dev: true
 
   /picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}

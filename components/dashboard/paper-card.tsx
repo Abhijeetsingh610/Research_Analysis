@@ -82,7 +82,12 @@ export function PaperCard({ paper, onDelete }: PaperCardProps) {
                 <FileText className="h-5 w-5 text-red-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg line-clamp-2 mb-1">{paper.title}</CardTitle>
+                <CardTitle
+                  className="text-lg mb-1 truncate max-w-full min-w-0"
+                  title={paper.title}
+                >
+                  {truncateString(paper.title, 40)}
+                </CardTitle>
                 <CardDescription className="flex items-center gap-4 text-sm">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
