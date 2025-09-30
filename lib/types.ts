@@ -75,6 +75,7 @@ export interface HighlightLocation {
     y2: number
     width: number
     height: number
+    pageNumber?: number
   }>
 }
 

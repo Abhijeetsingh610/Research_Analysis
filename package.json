@@ -60,6 +60,7 @@
     "mupdf-js": "^2.0.1",
     "next": "15.2.4",
     "next-themes": "^0.4.6",
+    "pdfjs-dist": "^5.4.149",
     "react-day-picker": "9.8.0",
     "react-dom": "^19",
     "react-dropzone": "latest",

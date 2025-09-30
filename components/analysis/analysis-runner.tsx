@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Play, Brain, Search, FileText, CheckCircle } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
-
+import { extractTextWithPositions, type TextItem } from "@/lib/ai/pdf-parser"
 
 import { PDFTextExtractor } from "@/components/pdf/PDFTextExtractor"
 
@@ -24,6 +24,7 @@ export function AnalysisRunner({ paperId, title, pdfUrl, onAnalysisComplete }: A
   const [currentStep, setCurrentStep] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [extractedText, setExtractedText] = useState<string | null>(null)
+  const [extractedTextItems, setExtractedTextItems] = useState<TextItem[] | null>(null)
   const [extracting, setExtracting] = useState(false)
 
   const runAnalysisMutation = trpc.analysis.run.useMutation({
@@ -49,31 +50,40 @@ export function AnalysisRunner({ paperId, title, pdfUrl, onAnalysisComplete }: A
     setExtracting(true)
     setCurrentStep("Extracting text from PDF...")
     setProgress(10)
-    // Use PDFTextExtractor logic directly
+    
     try {
-      // Use pdfjs directly to extract text
-      const { pdfjs } = await import("react-pdf")
-      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
-      const loadingTask = pdfjs.getDocument(pdfUrl)
-      const pdf = await loadingTask.promise
-      let fullText = ""
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i)
-        const textContent = await page.getTextContent()
-        const pageText = textContent.items
-          .map(item => 'str' in item ? (item as any).str : "")
-          .join(" ")
-        fullText += pageText + "\n"
-        console.log(`Page ${i} text:`, pageText.substring(0, 200))
+      console.log("📄 Extracting text with positions...")
+      
+      // Fetch the PDF as a Blob
+      const response = await fetch(pdfUrl)
+      const blob = await response.blob()
+      const file = new File([blob], "document.pdf", { type: "application/pdf" })
+      
+      // Extract text with positions
+      const { plainText, textItems } = await extractTextWithPositions(file)
+      
+      console.log(`✅ Extracted ${plainText.length} chars, ${textItems.length} text items`)
+      console.log("Text preview:", plainText.substring(0, 200))
+      
+      // Debug: Check if viewport dimensions are captured
+      if (textItems.length > 0) {
+        console.log("🔍 First text item:", textItems[0])
+        console.log("📐 Viewport dimensions:", {
+          pageWidth: textItems[0].pageWidth,
+          pageHeight: textItems[0].pageHeight
+        })
       }
-      console.log("Full extracted text length:", fullText.length)
-      console.log("Full extracted text preview:", fullText.substring(0, 500))
-      setExtractedText(fullText)
+      
+      // Store both text and textItems
+      setExtractedText(plainText)
+      setExtractedTextItems(textItems)
       setExtracting(false)
       setProgress(30)
       setCurrentStep("Text extraction complete.")
-      return fullText
+      
+      return { plainText, textItems }
     } catch (err) {
+      console.error("Text extraction error:", err)
       setExtracting(false)
       setError("Failed to extract text from PDF.")
       throw err
@@ -86,17 +96,28 @@ export function AnalysisRunner({ paperId, title, pdfUrl, onAnalysisComplete }: A
     setError(null)
 
     let text = extractedText
+    let items = extractedTextItems
+    
     if (!text) {
       try {
-        text = await handleExtractText()
+        const result = await handleExtractText()
+        text = result.plainText
+        items = result.textItems
       } catch (err) {
         setIsRunning(false)
         return
       }
     }
 
+    console.log("DEBUG - title:", title)
+    console.log("DEBUG - text:", text ? `${text.length} chars` : "NULL/EMPTY")
+    console.log("DEBUG - items:", items ? `${items.length} items` : "NULL/EMPTY")
+
     if (!title || !text) {
-      setError("Title or PDF text missing.")
+      const missingParts = []
+      if (!title) missingParts.push("title")
+      if (!text) missingParts.push("PDF text")
+      setError(`Missing: ${missingParts.join(" and ")}`)
       setIsRunning(false)
       return
     }
@@ -104,6 +125,7 @@ export function AnalysisRunner({ paperId, title, pdfUrl, onAnalysisComplete }: A
     console.log("Running analysis with title:", title)
     console.log("Text length:", text.length)
     console.log("Text preview:", text.substring(0, 200))
+    console.log("TextItems count:", items?.length || 0)
 
     // Delete existing analysis first
     setCurrentStep("Clearing previous analysis...")
@@ -117,7 +139,12 @@ export function AnalysisRunner({ paperId, title, pdfUrl, onAnalysisComplete }: A
     setCurrentStep("Analyzing with AI...")
     setProgress(60)
     try {
-      await runAnalysisMutation.mutateAsync({ paperId, title, text })
+      await runAnalysisMutation.mutateAsync({ 
+        paperId, 
+        title, 
+        text,
+        textItems: items 
+      })
     } catch (err) {
       setError("Analysis failed.")
       setIsRunning(false)

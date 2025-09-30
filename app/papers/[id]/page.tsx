@@ -66,37 +66,39 @@ export default function PaperPage() {
   const notes = paper.notes || []
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header */}
-      <div className="border-b bg-background p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Header - Responsive */}
+      <div className="border-b bg-background p-2 md:p-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-4">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                <ArrowLeft className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
               </Link>
             </Button>
-            <div>
-              <h1 className="font-semibold">{truncateString(paper.title, 60)}</h1>
-              <p className="text-sm text-muted-foreground">
-                Uploaded {new Date(paper.uploaded_at).toLocaleDateString()}
+            <div className="flex-1 min-w-0">
+              <h1 className="font-semibold text-sm md:text-base truncate">{truncateString(paper.title, 60)}</h1>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                {new Date(paper.uploaded_at).toLocaleDateString()}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" asChild>
+            <Button size="sm" asChild className="w-full md:w-auto">
               <Link href={`/papers/${paper.id}/analyze`}>
-                <Play className="h-4 w-4 mr-2" />
-                Start Analysis
+                <Play className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Start Analysis</span>
+                <span className="sm:hidden">Analyze</span>
               </Link>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* PDF Viewer */}
-      <div className="flex-1">
+      {/* PDF Viewer - Takes remaining space */}
+      <div className="flex-1 overflow-hidden">
         <PDFViewer paperId={paper.id} pdfUrl={paper.file_url} analysis={analysis} notes={notes} />
       </div>
     </div>

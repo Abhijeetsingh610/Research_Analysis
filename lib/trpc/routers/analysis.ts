@@ -20,15 +20,32 @@ const HighlightLocationSchema = z.object({
     .optional(),
 })
 
+const TextItemSchema = z.object({
+  text: z.string(),
+  page: z.number(),
+  pageNumber: z.number().optional(), // Alias for compatibility
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  pageWidth: z.number().optional(),   // ✅ CRITICAL: Viewport dimensions
+  pageHeight: z.number().optional()   // ✅ CRITICAL: Viewport dimensions
+})
+
 export const analysisRouter = createTRPCRouter({
   run: protectedProcedure.input(z.object({
     paperId: z.string(),
     title: z.string(),
-    text: z.string()
+    text: z.string(),
+    textItems: z.array(TextItemSchema).optional()
   })).mutation(async ({ ctx, input }) => {
     // Run the AI analysis pipeline with extracted text
     try {
-      const pipelineResult = await runAnalysisPipeline(input.text, input.title)
+      const pipelineResult = await runAnalysisPipeline(
+        input.text, 
+        input.title, 
+        input.textItems
+      )
 
       // Save analysis results to database
       const { data: analysis, error: analysisError } = await ctx.supabase
