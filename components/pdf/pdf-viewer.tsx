@@ -48,7 +48,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
   const scrollViewerTo = useRef<((highlight: IHighlight) => void) | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const hasScrolledToFirstHighlight = useRef(false);
-  // 🔥 CRITICAL FIX: Store current highlights in ref so scrollToHighlightFromHash can access latest value
+  //  CRITICAL FIX: Store current highlights in ref so scrollToHighlightFromHash can access latest value
   const allHighlightsRef = useRef<IHighlight[]>([]);
 
   // Debug analysis data
@@ -363,10 +363,10 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
   const allHighlights = useMemo(() => [...aiHighlights, ...userHighlights], [aiHighlights, userHighlights]);
   console.log(`Total highlights: ${allHighlights.length} (AI: ${aiHighlights.length}, User: ${userHighlights.length})`);
   
-  // 🔥 CRITICAL FIX: Keep ref updated with latest highlights for scroll function
+  //  CRITICAL FIX: Keep ref updated with latest highlights for scroll function
   useEffect(() => {
     allHighlightsRef.current = allHighlights;
-    console.log(`📌 Updated allHighlightsRef with ${allHighlights.length} highlights`);
+    console.log(` Updated allHighlightsRef with ${allHighlights.length} highlights`);
   }, [allHighlights]);
   
   // Debug first highlight to verify rects
@@ -390,22 +390,22 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     rectsCount: h.position?.rects?.length || 0
   })));
 
-  // 🔥 FIXED: Parse hash to get highlight ID (following reference implementation)
+  //  FIXED: Parse hash to get highlight ID (following reference implementation)
   const parseIdFromHash = () => {
     return document.location.hash.slice("#highlight-".length);
   };
 
-  // 🔥 FIXED: Reset hash (clears selection)
+  //  FIXED: Reset hash (clears selection)
   const resetHash = () => {
     document.location.hash = "";
   };
 
-  // 🔥 FIXED: Get highlight by ID using ref (always gets latest highlights)
+  //  FIXED: Get highlight by ID using ref (always gets latest highlights)
   const getHighlightById = (id: string): IHighlight | null => {
     return allHighlightsRef.current.find(h => h.id === id) || null;
   };
 
-  // 🔥 FIXED: Scroll to highlight from hash (following reference implementation exactly)
+  //  FIXED: Scroll to highlight from hash (following reference implementation exactly)
   // CRITICAL: Empty dependency array + ref access = stable callback that sees latest data
   const scrollToHighlightFromHash = useCallback(() => {
     const highlightId = parseIdFromHash();
@@ -434,30 +434,30 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     // Use library's scroll function (primary method)
     if (scrollViewerTo.current) {
       try {
-        console.log(`📜 Calling scrollViewerTo for ${highlightId}`, {
+        console.log(` Calling scrollViewerTo for ${highlightId}`, {
           page: highlight.position?.pageNumber,
           boundingRect: highlight.position?.boundingRect,
           hasRects: !!highlight.position?.rects,
           rectsCount: highlight.position?.rects?.length
         });
         scrollViewerTo.current(highlight);
-        console.log(`✅ ScrollViewerTo called successfully`);
+        console.log(` ScrollViewerTo called successfully`);
         
-        // 🔥 FALLBACK: Direct DOM scroll after a short delay to ensure it worked
+        //  FALLBACK: Direct DOM scroll after a short delay to ensure it worked
         setTimeout(() => {
           const pageNumber = highlight.position?.pageNumber;
           if (pageNumber) {
             // Try to find the page element and scroll to it
             const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
             if (pageElement) {
-              console.log(`🎯 Fallback: Found page element ${pageNumber}, scrolling...`);
+              console.log(` Fallback: Found page element ${pageNumber}, scrolling...`);
               pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
-              console.warn(`⚠️ Fallback: Page element ${pageNumber} not found in DOM`);
+              console.warn(` Fallback: Page element ${pageNumber} not found in DOM`);
               // Try alternative selector
               const altPageElement = document.querySelector(`.react-pdf__Page[data-page-number="${pageNumber}"]`);
               if (altPageElement) {
-                console.log(`🎯 Fallback: Found page via alt selector, scrolling...`);
+                console.log(` Fallback: Found page via alt selector, scrolling...`);
                 altPageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }
             }
@@ -471,13 +471,13 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     }
   }, []); // EMPTY DEPENDENCIES - matches reference implementation!
 
-  // 🔥 NEW: Update hash when clicking analysis items (following reference implementation)
+  //  NEW: Update hash when clicking analysis items (following reference implementation)
   const updateHash = useCallback((highlight: IHighlight) => {
     console.log(`🔗 Updating hash to: highlight-${highlight.id}`);
     window.location.hash = `highlight-${highlight.id}`;
   }, []);
 
-  // 🔥 NEW: Listen to hash changes for navigation (following reference implementation)
+  //  NEW: Listen to hash changes for navigation (following reference implementation)
   useEffect(() => {
     const handleHashChange = () => {
       console.log(`🔄 Hash changed: ${window.location.hash}`);
@@ -518,7 +518,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
     hasScrolledToFirstHighlight.current = false;
   }, [paperId]);
   
-  // 🔥 FORCE HIGHLIGHT VISIBILITY: Trigger re-render when highlights are ready
+  //  FORCE HIGHLIGHT VISIBILITY: Trigger re-render when highlights are ready
   useEffect(() => {
     if (aiHighlights.length > 0) {
       console.log(`✨ ${aiHighlights.length} highlights ready for rendering`);
@@ -532,10 +532,16 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
   }, [aiHighlights.length]);
 
   const handleSelectionFinished = (position: ScaledPosition, content: { text?: string }, hideTip: () => void, transformSelection: () => void) => {
+    console.log("📝 Text selected!", {
+      text: content.text?.substring(0, 50) + "...",
+      page: position.pageNumber,
+      boundingRect: position.boundingRect
+    });
     return (
       <Tip
         onOpen={transformSelection}
         onConfirm={(comment: { text: string; emoji: string }) => {
+          console.log("💾 Saving note with comment:", comment.text);
           createNote(position, content, comment, hideTip);
         }}
         isSaving={isSaving}
@@ -566,6 +572,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                           ref={pdfHighlighterRef}
                           pdfDocument={pdfDocument}
                           highlights={allHighlights}
+                          enableAreaSelection={() => false}
                           onSelectionFinished={handleSelectionFinished}
                           onScrollChange={resetHash}
                           highlightTransform={(highlight, index, setTip, hideTip, _, __, isScrolledTo) => {
@@ -582,11 +589,10 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                               });
                             }
                             
-                            // 🔥 Enhanced styles for better visibility
+                            //  Enhanced styles for better visibility
                             let style: React.CSSProperties = {
                               opacity: 1,
-                              pointerEvents: 'auto',
-                              cursor: 'pointer',
+                              mixBlendMode: 'multiply',
                               transition: 'all 0.2s ease'
                             };
                             
@@ -612,30 +618,25 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                             }
                             
                             return (
-                              <div 
+                              <Highlight
                                 key={`highlight-${highlight.id}`}
-                                style={style}
-                                className="pdf-highlight-item"
+                                isScrolledTo={isScrolledTo}
+                                position={highlight.position}
+                                comment={highlight.comment}
                                 onClick={() => {
                                   console.log(`🖱️ Clicked highlight: ${highlight.id}`);
                                   setSelectedHighlightId(highlight.id);
                                 }}
-                              >
-                                <Highlight
-                                  isScrolledTo={isScrolledTo}
-                                  position={highlight.position}
-                                  comment={highlight.comment}
-                                />
-                              </div>
+                                style={style}
+                              />
                             );
                           }}
                           scrollRef={(scrollTo) => {
-                            console.log("📌 scrollRef callback received");
+                            console.log(" scrollRef callback received");
                             scrollViewerTo.current = scrollTo;
                             // Immediately try to scroll if there's a hash (following reference pattern)
                             scrollToHighlightFromHash();
                           }}
-                          enableAreaSelection={() => false}
                         />
                       </div>
                     </div>
@@ -862,11 +863,12 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                           key={note.id}
                           className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
                           onClick={() => {
+                            console.log(`🖱️ CLICKED NOTE #${note.id}`);
                             setSelectedNote(note);
                             setSelectedHighlightId(`note-${note.id}`);
                             const highlight = allHighlights.find(h => h.id === `note-${note.id}`);
-                            if (highlight && scrollToFnRef.current) {
-                              scrollToFnRef.current(highlight);
+                            if (highlight) {
+                              updateHash(highlight); // Use hash-based navigation like analysis items
                             }
                           }}
                         >
