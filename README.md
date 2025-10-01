@@ -123,7 +123,7 @@ run: protectedProcedure
 
    ```bash
    git clone <repository-url>
-   cd paper-analysis-app
+   cd research-analysis
    ```
 
 2. **Install dependencies**
@@ -168,37 +168,38 @@ run: protectedProcedure
 ## 📁 Project Structure
 
 ```
-├── app/                         # Next.js App Router
-│   ├── api/                    # API routes
-│   │   ├── pdf/               # PDF processing endpoints
-│   │   └── trpc/              # tRPC API routes
-│   ├── auth/                  # Authentication pages
-│   ├── dashboard/             # User dashboard
-│   ├── papers/[id]/           # Paper detail pages
-│   ├── upload/                # PDF upload page
-│   ├── globals.css            # Global styles
-│   ├── layout.tsx             # Root layout
-│   └── page.tsx               # Home page
-├── components/                 # React components
-│   ├── analysis/              # Analysis display components
-│   ├── auth/                  # Authentication components
-│   ├── dashboard/             # Dashboard components
-│   ├── pdf/                   # PDF viewer components
-│   ├── ui/                    # Reusable UI components
-│   ├── upload/                # Upload components
-│   └── theme-provider.tsx     # Theme configuration
-├── lib/                       # Utility libraries
-│   ├── ai/                    # AI analysis pipeline
-│   ├── supabase/              # Supabase client configuration
-│   ├── trpc/                  # tRPC configuration
-│   ├── utils/                 # Utility functions
-│   ├── types.ts               # Type definitions
-│   └── utils.ts               # Helper utilities
-├── docs/                      # Documentation
-├── public/                    # Static assets
-├── scripts/                   # Database setup scripts
-├── styles/                    # Additional styles
-└── middleware.ts              # Next.js middleware
+├── app/               # Next.js App Router pages and API routes
+│   ├── api/            # Edge and serverless handlers
+│   ├── auth/           # Authentication flows
+│   ├── dashboard/      # Authenticated dashboard
+│   ├── papers/         # Paper detail routes
+│   ├── upload/         # PDF upload workflow
+│   ├── globals.css     # Global styles applied to the app
+│   ├── layout.tsx      # Root layout
+│   └── page.tsx        # Landing page
+├── components/         # Reusable React components
+│   ├── analysis/       # Analysis pipeline UI
+│   ├── auth/           # Authentication UI
+│   ├── dashboard/      # Dashboard widgets
+│   ├── pdf/            # PDF viewer and helpers
+│   ├── ui/             # Design system primitives
+│   ├── upload/         # Upload components
+│   └── theme-provider.tsx
+├── lib/                # Domain and infrastructure logic
+│   ├── ai/             # AI integration helpers
+│   ├── supabase/       # Supabase server/client utilities
+│   ├── trpc/           # tRPC router setup
+│   ├── utils/          # Miscellaneous utilities
+│   ├── types.ts
+│   └── utils.ts
+├── public/             # Static assets
+├── styles/             # Additional styling helpers
+│   └── globals.css
+├── middleware.ts       # Next.js middleware
+├── next.config.mjs     # Next.js configuration
+├── postcss.config.mjs  # PostCSS/Tailwind configuration
+├── package.json
+└── tsconfig.json
 ```
 
 ## 🔐 Authentication Flow
@@ -277,67 +278,49 @@ The project includes optimized build settings:
 - **Bundle analysis** for size optimization
 - **TypeScript** strict mode enabled
 
-## � Testing
+## 🧪 Testing
 
-### Running Tests
-
-```bash
-# Run all tests
-pnpm test
-
-# Run tests in watch mode
-pnpm test:watch
-
-# Run with coverage
-pnpm test:coverage
-```
-
-### Test Structure
-
-- **Unit Tests**: Component and utility function tests
-- **Integration Tests**: API route and database interaction tests
-- **E2E Tests**: Full user workflow testing
+Testing commands have not been configured in this repository yet. If you add a testing framework (e.g., Vitest, Playwright, or Cypress), update this section with the relevant commands.
 
 ## 🔧 Development
 
 ### Available Scripts
 
 ```bash
-pnpm dev          # Start development server
-pnpm build        # Build for production
-pnpm start        # Start production server
-pnpm lint         # Run ESLint
-pnpm type-check   # Run TypeScript compiler
+pnpm dev    # Start development server
+pnpm build  # Build for production
+pnpm start  # Start production server
+pnpm lint   # Run ESLint
 ```
+
+> **Note:** A dedicated `type-check` script is not configured. Run `pnpm lint` or `pnpm tsc --noEmit` manually if needed.
 
 ### Code Quality
 
-- **TypeScript**: Strict type checking enabled
+- **TypeScript**: Strict mode enabled via `tsconfig.json`
 - **ESLint**: Configured with Next.js and React best practices
-- **Prettier**: Code formatting (if configured)
-- **Husky**: Git hooks for pre-commit checks (if configured)
+- **Prettier**: Add your preferred configuration if you want automatic formatting
 
-## �🤝 Contributing
+## 🤝 Contributing
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
 3. **Make your changes**: Follow the existing code style and patterns
-4. **Add tests**: Ensure new features have appropriate test coverage
+4. **Run the formatter/linter**: `pnpm lint`
 5. **Commit your changes**: `git commit -m 'Add amazing feature'`
 6. **Push to the branch**: `git push origin feature/amazing-feature`
 7. **Submit a pull request**: Describe your changes and link any related issues
 
 ### Development Guidelines
 
-- Follow TypeScript best practices
+- Follow TypeScript best practices already configured in the project
 - Use meaningful commit messages
-- Add JSDoc comments for complex functions
-- Update documentation for new features
-- Ensure all tests pass before submitting PR
+- Add documentation for new features where relevant
+- Include tests if a testing framework is added in the future
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+A license file has not been added yet. Choose a license (for example, MIT) and add it to `LICENSE` if you plan to make the project public.
 
 ## 🙏 Acknowledgments
 
@@ -366,5 +349,4 @@ If you have questions or need help:
 
 ---
 
-Built with ❤️ using Next.js, tRPC, and Supabase 
- 
+Built with ❤️ using Next.js, tRPC, and Supabase
