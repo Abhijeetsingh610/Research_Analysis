@@ -335,10 +335,6 @@ A license file has not been added yet. Choose a license (for example, MIT) and a
 - [**Tailwind CSS**](https://tailwindcss.com/) - Utility-first CSS framework
 - [**shadcn/ui**](https://ui.shadcn.com/) - Re-usable components built with Radix UI
 
-## 🐛 Known Issues
-
-Check the [issues page](../../issues) for current known issues and feature requests.
-
 ## 📞 Support
 
 If you have questions or need help:
@@ -348,5 +344,3 @@ If you have questions or need help:
 3. Create a [new issue](../../issues/new) if needed
 
 ---
-
-Built with ❤️ using Next.js, tRPC, and Supabase
