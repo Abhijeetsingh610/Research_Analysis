@@ -37,6 +37,8 @@ interface PDFViewerProps {
 
 export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewerProps) {
   const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
+  const [showRedMarker, setShowRedMarker] = useState(false);
+  const redMarkerTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pdfHighlighterRef = useRef<any>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   console.log("PDFViewer received analysis:", analysis)
@@ -363,6 +365,13 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
   const allHighlights = useMemo(() => [...aiHighlights, ...userHighlights], [aiHighlights, userHighlights]);
   console.log(`Total highlights: ${allHighlights.length} (AI: ${aiHighlights.length}, User: ${userHighlights.length})`);
   
+  // Filter highlights to show only the selected one
+  const visibleHighlights = useMemo(() => {
+    if (!selectedHighlightId) return [];
+    return allHighlights.filter(h => h.id === selectedHighlightId);
+  }, [allHighlights, selectedHighlightId]);
+  console.log(`Visible highlights: ${visibleHighlights.length} (Selected: ${selectedHighlightId || 'none'})`);
+  
   //  CRITICAL FIX: Keep ref updated with latest highlights for scroll function
   useEffect(() => {
     allHighlightsRef.current = allHighlights;
@@ -430,6 +439,19 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
 
     // Update UI selection
     setSelectedHighlightId(highlightId);
+    
+    // Show red marker temporarily
+    setShowRedMarker(true);
+    
+    // Clear any existing timer
+    if (redMarkerTimerRef.current) {
+      clearTimeout(redMarkerTimerRef.current);
+    }
+    
+    // Hide red marker after 3 seconds
+    redMarkerTimerRef.current = setTimeout(() => {
+      setShowRedMarker(false);
+    }, 3000);
 
     // Use library's scroll function (primary method)
     if (scrollViewerTo.current) {
@@ -490,6 +512,15 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
       window.removeEventListener("hashchange", handleHashChange, false);
     };
   }, [scrollToHighlightFromHash]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (redMarkerTimerRef.current) {
+        clearTimeout(redMarkerTimerRef.current);
+      }
+    };
+  }, []);
 
   // ✅ Auto-scroll to first highlight when analysis loads
   useEffect(() => {
@@ -568,10 +599,10 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                     <div className="w-full h-full relative">
                       <div className="absolute inset-0">
                         <PdfHighlighter
-                          key={`pdf-highlighter-${allHighlights.length}`}
+                          key={`pdf-highlighter-${visibleHighlights.length}-${selectedHighlightId}`}
                           ref={pdfHighlighterRef}
                           pdfDocument={pdfDocument}
-                          highlights={allHighlights}
+                          highlights={visibleHighlights}
                           enableAreaSelection={() => false}
                           onSelectionFinished={handleSelectionFinished}
                           onScrollChange={resetHash}
@@ -611,24 +642,38 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                             }
                             
                             // Highlight selected item
-                            if (selectedHighlightId === highlight.id) {
-                              style.background = style.background?.replace('0.4', '0.7').replace('0.5', '0.8');
-                              style.border = style.border?.replace('0.5', '1.0').replace('0.6', '1.0');
-                              style.boxShadow = '0 0 8px rgba(0, 0, 0, 0.3)';
+                            const isSelected = selectedHighlightId === highlight.id;
+                            
+                            // Show red marker temporarily, then default yellow
+                            if (isSelected && showRedMarker) {
+                              // Red highlight during initial 3 seconds
+                              style.background = "rgba(239, 68, 68, 0.4)"; // Red color
+                              style.border = "2px solid rgba(239, 68, 68, 0.8)";
+                              style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.5)';
+                            } else if (isSelected) {
+                              // Default yellow after 3 seconds
+                              style.background = "rgba(255, 226, 104, 0.5)"; // Yellow
+                              style.border = "1px solid rgba(255, 200, 50, 0.6)";
                             }
                             
                             return (
-                              <Highlight
-                                key={`highlight-${highlight.id}`}
-                                isScrolledTo={isScrolledTo}
-                                position={highlight.position}
-                                comment={highlight.comment}
-                                onClick={() => {
-                                  console.log(`🖱️ Clicked highlight: ${highlight.id}`);
-                                  setSelectedHighlightId(highlight.id);
-                                }}
-                                style={style}
-                              />
+                              <div style={{ position: 'relative' }}>
+                                {/* Red marker at the start of selected highlight - only for 3 seconds */}
+                                {isSelected && showRedMarker && (
+                                  <div className="highlight-red-marker" />
+                                )}
+                                <Highlight
+                                  key={`highlight-${highlight.id}`}
+                                  isScrolledTo={isScrolledTo}
+                                  position={highlight.position}
+                                  comment={highlight.comment}
+                                  onClick={() => {
+                                    console.log(`🖱️ Clicked highlight: ${highlight.id}`);
+                                    setSelectedHighlightId(highlight.id);
+                                  }}
+                                  style={style}
+                                />
+                              </div>
                             );
                           }}
                           scrollRef={(scrollTo) => {
@@ -659,10 +704,29 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
               {analysis && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4" />
-                      Analysis Results
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4" />
+                        Analysis Results
+                      </CardTitle>
+                      {selectedHighlightId && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedHighlightId(null);
+                            setShowRedMarker(false);
+                            if (redMarkerTimerRef.current) {
+                              clearTimeout(redMarkerTimerRef.current);
+                            }
+                            resetHash();
+                          }}
+                          className="text-xs"
+                        >
+                          Clear Highlight
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Strengths Section */}
@@ -686,7 +750,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                             {analysis.strengths.map((strength, index) => (
                               <li
                                 key={index}
-                                className={`border-l-2 border-green-500 pl-3 py-1 cursor-pointer hover:bg-green-50 transition-colors ${selectedHighlightId === `strength-${index}` ? 'bg-green-100' : ''}`}
+                                className={`relative border-l-2 border-green-500 pl-3 py-1 cursor-pointer hover:bg-green-50 transition-colors ${selectedHighlightId === `strength-${index}` ? 'bg-green-100 border-l-4' : ''}`}
                                 onClick={() => {
                                   console.log(`🖱️ CLICKED STRENGTH #${index}`);
                                   const highlight = allHighlights.find(h => h.id === `strength-${index}`);
@@ -695,6 +759,9 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                                   }
                                 }}
                               >
+                                {selectedHighlightId === `strength-${index}` && (
+                                  <div className="absolute left-[-6px] top-1/2 transform -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-lg" />
+                                )}
                                 <div className="text-sm font-medium text-green-700 break-words">"{strength.text}"</div>
                                 <div className="text-xs text-muted-foreground mt-1 break-words">{strength.explanation}</div>
                                 {strength.chunk && (
@@ -734,7 +801,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                             {analysis.gaps.map((gap, index) => (
                               <li
                                 key={index}
-                                className={`border-l-2 border-yellow-500 pl-3 py-1 cursor-pointer hover:bg-yellow-50 transition-colors ${selectedHighlightId === `gap-${index}` ? 'bg-yellow-100' : ''}`}
+                                className={`relative border-l-2 border-yellow-500 pl-3 py-1 cursor-pointer hover:bg-yellow-50 transition-colors ${selectedHighlightId === `gap-${index}` ? 'bg-yellow-100 border-l-4' : ''}`}
                                 onClick={() => {
                                   console.log(`🖱️ CLICKED GAP #${index}`);
                                   const highlight = allHighlights.find(h => h.id === `gap-${index}`);
@@ -743,6 +810,9 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                                   }
                                 }}
                               >
+                                {selectedHighlightId === `gap-${index}` && (
+                                  <div className="absolute left-[-6px] top-1/2 transform -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-lg" />
+                                )}
                                 <div className="text-sm font-medium text-yellow-700 break-words">"{gap.text}"</div>
                                 <div className="text-xs text-muted-foreground mt-1 break-words">{gap.explanation}</div>
                                 {gap.chunk && (
@@ -807,7 +877,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                             {analysis.suggestions.map((suggestion, index) => (
                               <li
                                 key={index}
-                                className={`border-l-2 border-blue-500 pl-3 py-1 cursor-pointer hover:bg-blue-50 transition-colors ${selectedHighlightId === `suggestion-${index}` ? 'bg-blue-100' : ''}`}
+                                className={`relative border-l-2 border-blue-500 pl-3 py-1 cursor-pointer hover:bg-blue-50 transition-colors ${selectedHighlightId === `suggestion-${index}` ? 'bg-blue-100 border-l-4' : ''}`}
                                 onClick={() => {
                                   console.log(`🖱️ CLICKED SUGGESTION #${index}`);
                                   const highlight = allHighlights.find(h => h.id === `suggestion-${index}`);
@@ -816,6 +886,9 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                                   }
                                 }}
                               >
+                                {selectedHighlightId === `suggestion-${index}` && (
+                                  <div className="absolute left-[-6px] top-1/2 transform -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-lg" />
+                                )}
                                 <div className="text-sm font-medium text-blue-700 break-words">"{suggestion.text}"</div>
                                 <div className="flex justify-between text-xs mt-1">
                                   <span className="text-blue-600">{suggestion.category}</span>
@@ -861,7 +934,7 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                       {notesData.map((note) => (
                         <div
                           key={note.id}
-                          className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                          className={`relative p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${selectedHighlightId === `note-${note.id}` ? 'bg-yellow-50 border-yellow-400 border-2' : ''}`}
                           onClick={() => {
                             console.log(`🖱️ CLICKED NOTE #${note.id}`);
                             setSelectedNote(note);
@@ -872,6 +945,9 @@ export default function PDFViewer({ paperId, pdfUrl, analysis, notes }: PDFViewe
                             }
                           }}
                         >
+                          {selectedHighlightId === `note-${note.id}` && (
+                            <div className="absolute left-[-6px] top-1/2 transform -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-lg" />
+                          )}
                           <p className="text-sm break-words">{note.note_text}</p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {new Date(note.created_at).toLocaleDateString()}

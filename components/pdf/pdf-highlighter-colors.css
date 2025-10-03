@@ -102,3 +102,28 @@
   -moz-user-select: text !important;
   -ms-user-select: text !important;
 }
+
+/* Red marker for selected highlight */
+.highlight-red-marker {
+  position: absolute;
+  left: -8px;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background-color: #ef4444;
+  border-radius: 2px;
+  z-index: 10;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  animation: pulseMarker 2s ease-in-out infinite;
+}
+
+@keyframes pulseMarker {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  }
+}
